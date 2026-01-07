@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>History | Smart Queue</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+* { box-sizing: border-box; font-family: "Segoe UI", sans-serif; }
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #1d2671, #c33764);
+}
+
+/* Navbar */
+.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 25px;
+    z-index: 1000;
+}
+.navbar h2 { color: white; margin: 0; font-size: 22px; }
+.navbar .nav a { color: white; margin-left: 15px; text-decoration: none; font-weight: 500; }
+
+/* Main Glass Container */
+.main-box {
+    margin-top: 80px;
+    width: 90%;
+    max-width: 1000px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(15px);
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 0 25px rgba(0,0,0,0.2);
+    color: white;
+}
+
+/* Table */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+th, td { padding: 12px; text-align: center; }
+th { background: rgba(255,255,255,0.25); }
+tr:nth-child(even) { background: rgba(255,255,255,0.1); }
+
+.status-waiting { color: #ffd700; font-weight: bold; }
+.status-serving { color: #00ff99; font-weight: bold; }
+.status-done { color: #ddd; font-weight: bold; }
+
+.footer { text-align: center; margin-top: 15px; font-size: 13px; opacity: 0.8; }
+</style>
+</head>
+<body>
+
+<!-- Navbar -->
+<div class="navbar">
+    <h2>Smart Queue System</h2>
+    <div class="nav">
+        <a href="dashboard.html">Dashboard</a>
+        <a href="token.html">Get Token</a>
+        <a href="queuestatus.html">Queue Status</a>
+        <a href="history.html">History</a>
+        <a href="login.html">Logout</a>
+    </div>
+</div>
+
+<!-- Main Glass Container -->
+<div class="main-box">
+    <h2>Token History</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Token No</th>
+                <th>Name</th>
+                <th>Service</th>
+                <th>Department</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody id="historyBody">
+            <!-- Data from backend -->
+        </tbody>
+    </table>
+
+    <div class="footer">
+        Smart Queue Management System © 2025
+    </div>
+</div>
+
+<script>
+function loadHistory() {
+    fetch("http://localhost:8081/api/token/all")
+        .then(res => res.json())
+        .then(data => {
+            const table = document.getElementById("historyBody");
+            table.innerHTML = "";
+
+            data.forEach(t => {
+                let statusClass = "status-waiting";
+                if (t.status === "SERVING") statusClass = "status-serving";
+                if (t.status === "DONE") statusClass = "status-done";
+
+                table.innerHTML += `
+                    <tr>
+                        <td>${t.tokenNumber}</td>
+                        <td>${t.name}</td>
+                        <td>${t.service}</td>
+                        <td>${t.department}</td>
+                        <td class="${statusClass}">${t.status}</td>
+                    </tr>
+                `;
+            });
+        })
+        .catch(() => console.error("Backend not reachable"));
+}
+
+loadHistory();
+setInterval(loadHistory, 5000);
+</script>
+
+</body>
+</html>

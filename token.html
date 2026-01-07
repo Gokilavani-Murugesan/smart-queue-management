@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Generate Token | Smart Queue</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; font-family:"Segoe UI", sans-serif; }
+body { min-height:100vh; background: linear-gradient(135deg,#1d2671,#c33764); color:white; }
+
+.navbar { position:fixed; top:0; left:0; width:100%; height:60px; background: rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:space-between; padding:0 30px; font-size:20px; font-weight:bold; box-shadow:0 4px 10px rgba(0,0,0,0.3); z-index:1000; }
+.navbar .nav a { color:white; margin-left:15px; text-decoration:none; font-weight:500; }
+
+.container { display:flex; justify-content:center; align-items:center; margin-top:80px; }
+.form-box { width:380px; background: rgba(255,255,255,0.15); backdrop-filter: blur(15px); padding:25px; border-radius:15px; box-shadow:0 8px 30px rgba(0,0,0,0.3); }
+.form-box h3 { text-align:center; margin-bottom:20px; }
+label { display:block; margin-top:12px; font-size:14px; }
+select,input { width:100%; padding:10px; margin-top:6px; border-radius:8px; border:none; outline:none; font-size:14px; }
+button { width:100%; margin-top:20px; padding:12px; background:#00ff99; color:#000; border:none; border-radius:8px; font-weight:bold; font-size:15px; cursor:pointer; transition:0.3s; }
+button:hover { background:#fff; }
+
+#myToken { margin-top:15px; text-align:center; font-size:16px; font-weight:bold; color:#ffd700; }
+</style>
+</head>
+<body>
+
+<div class="navbar">
+    <div>Smart Queue System</div>
+    <div class="nav">
+        <a href="dashboard.html">Dashboard</a>
+        <a href="token.html">Get Token</a>
+        <a href="queuestatus.html">Queue Status</a>
+        <a href="login.html">Logout</a>
+    </div>
+</div>
+
+<div class="container">
+  <div class="form-box">
+    <h3>Generate Token</h3>
+    <label>Category</label>
+    <select id="category">
+      <option value="">Select</option>
+      <option value="Hospital">Hospital</option>
+      <option value="Bank">Bank</option>
+      <option value="Government">Government</option>
+    </select>
+
+    <label>Service</label>
+    <select id="service"><option value="">Select</option></select>
+
+    <label>Sub Service</label>
+    <select id="subservice"><option value="">Select</option></select>
+
+    <label>Name</label>
+    <input type="text" id="name" placeholder="Enter Name">
+
+    <label>Phone</label>
+    <input type="text" id="phone" placeholder="Enter Phone">
+
+    <button onclick="generateToken()">Generate Token</button>
+
+    <div id="myToken"></div>
+  </div>
+</div>
+
+<script>
+const services = { Hospital:["OPD","Emergency","Pharmacy"], Bank:["Account","Deposit","Withdraw"], Government:["License","Certificate"] };
+const subservices = { OPD:["General","Specialist"], Emergency:["Critical","Normal"], Pharmacy:["Medicine","Vaccine"], Account:["Savings","Current"], Deposit:["Cash","Cheque"], Withdraw:["ATM","Counter"], License:["Driving","Business"], Certificate:["Birth","Income"] };
+
+const category = document.getElementById("category");
+const service = document.getElementById("service");
+const subservice = document.getElementById("subservice");
+
+category.addEventListener("change", () => {
+    service.innerHTML = "<option value=''>Select</option>";
+    subservice.innerHTML = "<option value=''>Select</option>";
+    if(services[category.value]) services[category.value].forEach(s=>{ let opt=document.createElement("option"); opt.value=s; opt.textContent=s; service.appendChild(opt); });
+});
+
+service.addEventListener("change", () => {
+    subservice.innerHTML = "<option value=''>Select</option>";
+    if(subservices[service.value]) subservices[service.value].forEach(ss=>{ let opt=document.createElement("option"); opt.value=ss; opt.textContent=ss; subservice.appendChild(opt); });
+});
+
+function generateToken() {
+    const nameField = document.getElementById("name");
+    const phoneField = document.getElementById("phone");
+
+    if(!nameField.value || !category.value || !service.value){
+        alert("Please fill name, category, and service!");
+        return;
+    }
+
+    const data = {
+        name: nameField.value,
+        phone: phoneField.value,
+        category: category.value,
+        service: service.value,
+        department: service.value,
+        subservice: subservice.value
+    };
+
+    fetch("http://localhost:8081/api/token/add", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(data)
+    })
+    .then(res=>res.json())
+    .then(res=>{
+        localStorage.setItem("myTokenNumber", res.tokenNumber);
+        document.getElementById("myToken").textContent = `✅ Your Token: ${res.tokenNumber} | Status: ${res.status}`;
+        nameField.value = ""; phoneField.value = ""; // clear after submission
+    })
+    .catch(err=>{ console.error(err); alert("❌ Backend not reachable"); });
+}
+</script>
+</body>
+</html>

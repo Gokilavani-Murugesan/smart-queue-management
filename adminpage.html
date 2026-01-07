@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Admin Panel - Smart Queue</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body { margin:0; font-family: "Poppins", sans-serif; background: linear-gradient(135deg,#1d2671,#c33764); color:white;}
+.navbar { display:flex; justify-content:space-between; padding:15px 30px; background:rgba(0,0,0,0.3);}
+.navbar a { color:white; text-decoration:none; margin-left:20px;}
+.container { padding:100px 20px 20px; display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:20px;}
+.card { background: rgba(255,255,255,0.15); padding:25px; border-radius:15px;}
+.queue-item { display:flex; justify-content:space-between; padding:10px; background:rgba(255,255,255,0.2); border-radius:10px; margin-bottom:8px;}
+button { padding:8px 12px; border:none; border-radius:8px; cursor:pointer; background:rgba(255,255,255,0.3);}
+button:hover { background:white; color:#1d2671;}
+h2 { text-align:center; margin-bottom:15px;}
+</style>
+</head>
+<body>
+
+<div class="navbar">
+    <div>Smart Queue Admin</div>
+    <div>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="token.html">Get Token</a>
+        <a href="queuestatus.html">Queue Status</a>
+    </div>
+</div>
+
+<div class="container">
+
+    <div class="card" id="hospitalCard">
+        <h2>Hospital</h2>
+        <div>Now Serving: <span id="currentHospital">--</span></div>
+        <button onclick="callNext('Hospital')">Call Next</button>
+        <button onclick="completeToken('Hospital')">Mark Completed</button>
+        <h3>Waiting Queue</h3>
+        <div id="queueHospital"></div>
+    </div>
+
+    <div class="card" id="bankCard">
+        <h2>Bank</h2>
+        <div>Now Serving: <span id="currentBank">--</span></div>
+        <button onclick="callNext('Bank')">Call Next</button>
+        <button onclick="completeToken('Bank')">Mark Completed</button>
+        <h3>Waiting Queue</h3>
+        <div id="queueBank"></div>
+    </div>
+
+    <div class="card" id="govCard">
+        <h2>Government</h2>
+        <div>Now Serving: <span id="currentGovernment">--</span></div>
+        <button onclick="callNext('Government')">Call Next</button>
+        <button onclick="completeToken('Government')">Mark Completed</button>
+        <h3>Waiting Queue</h3>
+        <div id="queueGovernment"></div>
+    </div>
+
+</div>
+
+<script>
+let queues = {
+    "Hospital": { current: "--", list: [] },
+    "Bank": { current: "--", list: [] },
+    "Government": { current: "--", list: [] }
+};
+
+// Load queues from backend
+function loadQueues(){
+    ["Hospital","Bank","Government"].forEach(cat=>{
+        fetch(`http://localhost:8081/api/token/category/${cat}`)
+        .then(res=>res.json())
+        .then(data=>{
+            const waiting = data.filter(t=>t.status==="WAITING").map(t=>t.tokenNumber);
+            queues[cat].list = waiting;
+            if(waiting.length>0 && queues[cat].current==="--") queues[cat].current = waiting[0];
+            renderQueue(cat);
+        });
+    });
+}
+
+// Render queue for a category
+function renderQueue(category){
+    document.getElementById("current"+category).innerText = queues[category].current;
+    const container = document.getElementById("queue"+category);
+    container.innerHTML = "";
+    queues[category].list.forEach(t=>{
+        container.innerHTML += `<div class="queue-item">Token ${t}</div>`;
+    });
+}
+
+// Call next token
+function callNext(category){
+    if(queues[category].list.length>0){
+        queues[category].current = queues[category].list.shift();
+        renderQueue(category);
+    }
+}
+
+// Complete token
+function completeToken(category){
+    const current = queues[category].current;
+    if(current==="--") return alert("No token selected for "+category+"!");
+    fetch(`http://localhost:8081/api/token/complete/${current}?category=${category}`, { method:"PUT" })
+    .then(res=>res.text())
+    .then(msg=>{
+        alert(msg);
+        queues[category].current = queues[category].list.length>0 ? queues[category].list[0] : "--";
+        renderQueue(category);
+    });
+}
+
+// Initial load
+loadQueues();
+setInterval(loadQueues,5000);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Home | Smart Queue</title>
+
+<style>
+* {
+    box-sizing: border-box;
+    font-family: "Segoe UI", sans-serif;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #1d2671, #c33764);
+}
+
+/* Fixed Navbar */
+.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 25px;
+    z-index: 1000;
+}
+
+.navbar h2 {
+    color: white;
+    margin: 0;
+    font-size: 22px;
+}
+
+.navbar .nav a {
+    color: white;
+    margin-left: 15px;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+/* Main Glass Container */
+.main-box {
+    margin-top: 80px;
+    width: 90%;
+    max-width: 800px;
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(15px);
+    border-radius: 20px;
+    padding: 40px;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+    color: white;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+
+.main-box h1 {
+    font-size: 36px;
+    margin-bottom: 20px;
+}
+
+.main-box p {
+    font-size: 18px;
+    margin-bottom: 30px;
+}
+
+/* Buttons */
+.button {
+    display: inline-block;
+    background: #ffd700;
+    color: #1d2671;
+    font-weight: bold;
+    padding: 12px 25px;
+    border-radius: 12px;
+    text-decoration: none;
+    margin: 10px;
+    transition: 0.3s;
+}
+
+.button:hover {
+    background: #fff;
+    color: #c33764;
+}
+
+/* Footer */
+.footer {
+    text-align: center;
+    margin-top: 30px;
+    font-size: 13px;
+    opacity: 0.8;
+}
+</style>
+</head>
+<body>
+
+<!-- Navbar -->
+<div class="navbar">
+    <h2>Smart Queue System</h2>
+    <div class="nav">
+        <a href="dashboard.html">Dashboard</a>
+        <a href="token.html">Get Token</a>
+        <a href="queuestatus.html">Queue Status</a>
+        <a href="login.html">Logout</a>
+    </div>
+</div>
+
+<!-- Main Glass Container -->
+<div class="main-box">
+    <h1>Welcome to Smart Queue System</h1>
+    <p>Manage your tokens efficiently and check your queue status in real time.</p>
+    <a href="#" class="button" onclick="goToToken()">Get Token</a>
+    <a href="queuestatus.html" class="button">View Queue Status</a>
+</div>
+
+<div class="footer">
+    Smart Queue Management System © 2025
+</div>
+
+<script>
+// Check if user is logged in before allowing Get Token
+function goToToken() {
+    if (localStorage.getItem("loggedIn") === "true") {
+        // User is logged in, go to token page
+        window.location.href = "token.html";
+    } else {
+        // Not logged in, go to login page first
+        alert("You need to login first!");
+        window.location.href = "login.html";
+    }
+}
+</script>
+
+</body>
+</html>

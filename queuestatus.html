@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Queue Status - Smart Queue</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body {
+    margin:0;
+    font-family:"Segoe UI",sans-serif;
+    background: linear-gradient(135deg, #1d2671, #c33764);
+    color:white;
+}
+.navbar {
+    display:flex;
+    justify-content:space-between;
+    padding:15px 30px;
+    background:rgba(0,0,0,0.3);
+}
+.navbar a { color:white; text-decoration:none; margin-left:20px;}
+.container {
+    padding:100px 20px 20px;
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+    gap:20px;
+}
+.card {
+    background: rgba(255,255,255,0.15);
+    padding:25px;
+    border-radius:15px;
+    box-shadow:0 8px 32px rgba(0,0,0,0.3);
+}
+h2 { text-align:center; margin-bottom:15px; color:#ffd700;}
+.queue-item {
+    display:flex;
+    justify-content:space-between;
+    padding:10px;
+    background:rgba(255,255,255,0.2);
+    border-radius:10px;
+    margin-bottom:8px;
+}
+.wait-time { color:#00ffcc; font-weight:bold; }
+</style>
+</head>
+<body>
+
+<div class="navbar">
+    <div>Smart Queue Status</div>
+    <div>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="token.html">Get Token</a>
+        <a href ="Historypage.html">History</a>
+    </div>
+</div>
+
+<div class="container">
+    <div class="card" id="hospitalCard">
+        <h2>Hospital</h2>
+        <div id="queueHospital"></div>
+    </div>
+    <div class="card" id="bankCard">
+        <h2>Bank</h2>
+        <div id="queueBank"></div>
+    </div>
+    <div class="card" id="govCard">
+        <h2>Government</h2>
+        <div id="queueGovernment"></div>
+    </div>
+</div>
+
+<script>
+const avgWaitPerToken = 5; // minutes per token
+const categories = ["Hospital","Bank","Government"];
+
+// Load queues from backend
+function loadQueues(){
+    categories.forEach(cat=>{
+        fetch(`http://localhost:8081/api/token/category/${cat}`)
+        .then(res=>res.json())
+        .then(data=>{
+            const waiting = data.filter(t=>t.status==="WAITING").map(t=>t.tokenNumber);
+            const container = document.getElementById("queue"+cat);
+            container.innerHTML="";
+            waiting.forEach((token,index)=>{
+                container.innerHTML += `
+                    <div class="queue-item">
+                        <span>Token ${token}</span>
+                        <span class="wait-time">${index*avgWaitPerToken} min</span>
+                    </div>`;
+            });
+        });
+    });
+}
+
+// Initial load
+loadQueues();
+// Refresh every 5 seconds
+setInterval(loadQueues,5000);
+</script>
+
+</body>
+</html>
