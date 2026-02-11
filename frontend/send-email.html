@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Send Token Email</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: #f4f4f4;
+        }
+        .card {
+            width: 350px;
+            margin: 100px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px gray;
+        }
+        input, button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+        }
+        button {
+            background: green;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="card">
+    <h2>📧 Send Token Email</h2>
+
+    <input type="email" id="email" placeholder="Enter Email" required />
+    <input type="number" id="token" placeholder="Enter Token Number" required />
+
+    <button onclick="sendEmail()">Send Email</button>
+
+    <p id="result"></p>
+</div>
+
+<script>
+function sendEmail() {
+
+    const email = document.getElementById("email").value;
+    const token = document.getElementById("token").value;
+
+    if (!email || !token) {
+        alert("Please fill all fields!");
+        return;
+    }
+
+    fetch(`http://localhost:8081/api/token/sendTokenEmail?email=${email}&tokenNumber=${token}`, {
+        method: "POST"
+    })
+    .then(response => response.text())
+    .then(data => {
+        document.getElementById("result").innerHTML = data;
+    })
+    .catch(error => {
+        console.error(error);
+        alert("Failed to send email");
+    });
+}
+</script>
+
+</body>
+</html>

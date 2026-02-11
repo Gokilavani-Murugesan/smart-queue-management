@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Home | Smart Queue</title>
+
+<style>
+* {
+    box-sizing: border-box;
+    font-family: "Segoe UI", sans-serif;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #1d2671, #c33764);
+}
+
+/* Navbar */
+.navbar {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    height: 60px;
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 25px;
+}
+
+.navbar h2 {
+    color: white;
+    margin: 0;
+}
+
+.navbar a {
+    color: white;
+    margin-left: 15px;
+    text-decoration: none;
+}
+
+/* Main Box */
+.main-box {
+    margin-top: 100px;
+    width: 90%;
+    max-width: 800px;
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(15px);
+    border-radius: 20px;
+    padding: 40px;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+    color: white;
+}
+
+.button {
+    background: #ffd700;
+    color: #1d2671;
+    padding: 12px 30px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    margin: 15px;
+    font-weight: bold;
+}
+
+.button:hover {
+    background: white;
+}
+</style>
+</head>
+
+<body>
+
+<!-- Navbar -->
+<div class="navbar">
+    <h2>Smart Queue System</h2>
+    <div>
+        <a href="#" onclick="logout()">Logout</a>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="main-box">
+    <h1>Welcome to Smart Queue System</h1>
+    <p>Manage your tokens and queue easily.</p>
+
+    <button class="button" onclick="goToken()">Get Token</button>
+    <button class="button" onclick="goQueue()">View Queue Status</button>
+</div>
+
+<script>
+// 🔒 Check login when page loads
+if (localStorage.getItem("loggedIn") !== "true") {
+    alert("Please login first!");
+    window.location.href = "Login.html";
+}
+
+// 👉 Button Actions
+function goToken() {
+    window.location.href = "token.html";
+}
+
+function goQueue() {
+    window.location.href = "queuestatus.html";
+}
+
+function logout() {
+    localStorage.removeItem("loggedIn");
+    window.location.href = "Login.html";
+}
+</script>
+
+</body>
+</html>

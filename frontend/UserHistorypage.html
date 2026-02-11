@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>My Token History - Smart Queue</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body { 
+    margin:0; 
+    font-family: "Poppins", sans-serif; 
+    background: linear-gradient(135deg,#1d2671,#c33764); 
+    color:white;
+}
+.navbar { 
+    display:flex; 
+    justify-content:space-between; 
+    padding:15px 30px; 
+    background:rgba(0,0,0,0.3);
+}
+.container { 
+    padding:90px 20px 20px; 
+    display:flex; 
+    flex-direction: column; 
+    align-items:center; 
+    gap:30px;
+}
+.card { 
+    background: rgba(255,255,255,0.15); 
+    padding:25px; 
+    border-radius:15px; 
+    width:90%; 
+    max-width:1000px;
+}
+h2,h3 { 
+    text-align:center; 
+    margin:10px 0; 
+}
+table { 
+    width:100%; 
+    border-collapse: collapse; 
+    margin-top:15px;
+}
+th, td { 
+    padding:10px; 
+    text-align:center; 
+    border: 1px solid rgba(255,255,255,0.3);
+    font-size:14px;
+}
+th { 
+    background: rgba(255,255,255,0.2); 
+}
+tr:nth-child(even) { background: rgba(255,255,255,0.1); }
+tr:hover { background: rgba(255,255,255,0.25); }
+button { 
+    padding:8px 12px; 
+    border:none; 
+    border-radius:8px; 
+    cursor:pointer; 
+    background:rgba(255,255,255,0.3);
+}
+button:hover { 
+    background:white; 
+    color:#1d2671;
+}
+</style>
+</head>
+<body>
+
+<div class="navbar">
+    <div id="title">My Token History</div>
+    <button onclick="logout()">Logout</button>
+</div>
+
+<div class="container">
+    <div class="card">
+        <h2>Hello, <span id="userEmail">--</span></h2>
+        <h3>Your Previous Tokens</h3>
+        <div id="historyContainer">
+            <i>Loading your token history...</i>
+        </div>
+    </div>
+</div>
+
+<script>
+// ---------------- AUTH CHECK ----------------
+let email = localStorage.getItem("userEmail");  // make sure user email is stored at login
+if(!email){ 
+    alert("Please login first!"); 
+    window.location.href = "login.html"; 
+}
+document.getElementById("userEmail").innerText = email;
+
+// ---------------- LOGOUT ----------------
+function logout(){
+    localStorage.clear();
+    window.location.href = "login.html";
+}
+
+// ---------------- LOAD USER HISTORY ----------------
+function loadHistory(){
+    fetch(`http://localhost:8081/api/token/user/history?email=${encodeURIComponent(email)}`)
+    .then(res => res.json())
+    .then(data => {
+        const container = document.getElementById("historyContainer");
+        if(data.length === 0){
+            container.innerHTML = "<i>No tokens found in your history.</i>";
+            return;
+        }
+
+        let html = `<table>
+            <thead>
+                <tr>
+                    <th>Token No</th>
+                    <th>Category</th>
+                    <th>Service</th>
+                    <th>Department</th>
+                    <th>Subservice</th>
+                    <th>Status</th>
+                    <th>Created At</th>
+                    <th>Processing Time (min)</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+        data.forEach(t => {
+            html += `<tr>
+                <td>${t.tokenNumber}</td>
+                <td>${t.category}</td>
+                <td>${t.service}</td>
+                <td>${t.department}</td>
+                <td>${t.subservice}</td>
+                <td>${t.status}</td>
+                <td>${new Date(t.createdAt).toLocaleString()}</td>
+                <td>${t.processingTimeMinutes}</td>
+            </tr>`;
+        });
+
+        html += `</tbody></table>`;
+        container.innerHTML = html;
+    })
+    .catch(err => {
+        console.error(err);
+        document.getElementById("historyContainer").innerHTML = "<i>Error loading history</i>";
+    });
+}
+
+// ---------------- INIT ----------------
+loadHistory();
+</script>
+
+</body>
+</html>

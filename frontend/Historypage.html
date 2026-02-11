@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>All Token History | Smart Queue</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body{
+    margin:0;
+    font-family:Segoe UI, sans-serif;
+    background:linear-gradient(135deg,#1d2671,#c33764);
+    min-height:100vh;
+    color:white;
+}
+
+/* Navbar */
+.navbar{
+    height:60px;
+    background:rgba(255,255,255,0.12);
+    backdrop-filter:blur(12px);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 25px;
+}
+.navbar a{
+    color:white;
+    text-decoration:none;
+    margin-left:15px;
+}
+
+/* Card */
+.container{
+    max-width:950px;
+    margin:50px auto;
+    background:rgba(255,255,255,0.15);
+    padding:30px;
+    border-radius:18px;
+    backdrop-filter:blur(15px);
+    box-shadow:0 0 20px rgba(0,0,0,0.3);
+}
+
+h2{text-align:center;margin-bottom:20px}
+
+/* Table */
+table{
+    width:100%;
+    border-collapse:collapse;
+}
+th,td{
+    padding:12px;
+    text-align:center;
+}
+th{
+    background:rgba(255,255,255,0.25);
+}
+tr:nth-child(even){
+    background:rgba(255,255,255,0.08);
+}
+
+/* Status badges */
+.badge{
+    padding:5px 12px;
+    border-radius:12px;
+    font-size:13px;
+    font-weight:bold;
+}
+.waiting{background:#f1c40f;color:black;}
+.serving{background:#3498db;}
+.done{background:#2ecc71;}
+
+.empty{
+    text-align:center;
+    padding:25px;
+    opacity:0.8;
+}
+
+/* Search bar */
+.search-container{
+    text-align:center;
+    margin-bottom:20px;
+}
+.search-container input{
+    padding:10px 15px;
+    width:250px;
+    border-radius:8px;
+    border:none;
+    outline:none;
+    font-size:14px;
+}
+
+/* Export button */
+.export-btn{
+    padding:10px 20px;
+    border:none;
+    border-radius:8px;
+    background:#2ecc71;
+    color:white;
+    font-weight:bold;
+    cursor:pointer;
+    margin-left:10px;
+}
+.export-btn:hover{
+    background:#27ae60;
+}
+</style>
+</head>
+
+<body>
+
+<!-- NAVBAR -->
+<div class="navbar">
+    <h3>Admin - Smart Queue</h3>
+    <div>
+        <a href="Homepage.html">Home</a>
+        <a href="token.html">Add Token</a>
+        <a href="queuestatus.html">Queue Status</a>
+        <a href="login.html">Login</a>
+    </div>
+</div>
+
+<!-- CONTENT -->
+<div class="container">
+    <h2 id="categoryTitle">All Token History</h2>
+
+    <!-- Search and Export -->
+    <div class="search-container">
+        <input type="text" id="searchInput" placeholder="Search by Name or Phone">
+        <button class="export-btn" id="exportBtn">Export CSV</button>
+    </div>
+
+    <!-- Token Table -->
+    <table id="historyTable">
+        <thead>
+            <tr>
+                <th>Token No</th>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Department</th>
+                <th>Service</th>
+                <th>Status</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody id="historyBody"></tbody>
+    </table>
+
+    <div class="empty" id="emptyMsg" style="display:none;">
+        No tokens available.
+    </div>
+</div>
+
+<script>
+// ------------------- ADMIN ROLE -------------------
+let role = localStorage.getItem("userRole");
+if(!role){
+    alert("Unauthorized access!");
+    window.location.href = "login.html";
+}
+
+let categoryMap = {
+    "HOSPITAL_ADMIN": "Hospital",
+    "BANK_ADMIN": "Bank",
+    "GOVT_ADMIN": "Government"
+};
+
+let category = categoryMap[role];
+if(!category){
+    alert("Invalid Role!");
+    window.location.href = "login.html";
+}
+
+document.getElementById("categoryTitle").innerText = category + " Token History";
+
+// ------------------- LOAD TOKENS -------------------
+let allTokens = [];
+
+function loadTokens() {
+    fetch(`http://localhost:8081/api/token/category/${category}`)
+    .then(res => res.json())
+    .then(data => {
+        allTokens = data;
+        renderTable(allTokens);
+    })
+    .catch(err=>{
+        console.error(err);
+        const empty = document.getElementById("emptyMsg");
+        empty.textContent = "Backend not reachable!";
+        empty.style.display = "block";
+    });
+}
+
+// ------------------- RENDER TABLE -------------------
+function renderTable(tokens){
+    const body = document.getElementById("historyBody");
+    const empty = document.getElementById("emptyMsg");
+    body.innerHTML = "";
+
+    if(tokens.length === 0){
+        empty.style.display = "block";
+        return;
+    } else {
+        empty.style.display = "none";
+    }
+
+    tokens.forEach(t => {
+        const name = t.name ? t.name : "-";
+        const phone = t.phone ? t.phone : "-";
+        const department = t.department ? t.department : "-";
+        const service = t.service ? t.service : "-";
+        const statusClass = t.status ? t.status.toLowerCase() : "waiting";
+        const date = t.createdAt ? new Date(t.createdAt).toLocaleString() : "-";
+
+        body.innerHTML += `
+            <tr>
+                <td>${t.tokenNumber}</td>
+                <td>${name}</td>
+                <td>${phone}</td>
+                <td>${department}</td>
+                <td>${service}</td>
+                <td><span class="badge ${statusClass}">${t.status}</span></td>
+                <td>${date}</td>
+            </tr>
+        `;
+    });
+}
+
+// ------------------- SEARCH FUNCTION -------------------
+document.getElementById("searchInput").addEventListener("input", function(){
+    const query = this.value.toLowerCase().trim();
+
+    const filtered = allTokens.filter(t => {
+        const name = t.name ? t.name.toLowerCase() : "";
+        const phone = t.phone ? t.phone.toLowerCase() : "";
+        return name.includes(query) || phone.includes(query);
+    });
+
+    renderTable(filtered);
+});
+
+// ------------------- EXPORT CSV -------------------
+document.getElementById("exportBtn").addEventListener("click", function(){
+    const query = document.getElementById("searchInput").value.toLowerCase().trim();
+    const tokensToExport = query 
+        ? allTokens.filter(t => {
+            const name = t.name ? t.name.toLowerCase() : "";
+            const phone = t.phone ? t.phone : "";
+            return name.includes(query) || phone.includes(query);
+        })
+        : allTokens;
+
+    if(tokensToExport.length === 0) return alert("No tokens to export!");
+
+    let csvContent = "TokenNumber,Name,Phone,Department,Service,Status,CreatedAt\n";
+    tokensToExport.forEach(t => {
+        const name = t.name ? t.name : "";
+        const phone = t.phone ? t.phone : "";
+        const department = t.department ? t.department : "";
+        const service = t.service ? t.service : "";
+        const status = t.status ? t.status : "";
+        const date = t.createdAt ? t.createdAt : "";
+        csvContent += `${t.tokenNumber},${name},${phone},${department},${service},${status},${date}\n`;
+    });
+
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "tokens.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+});
+
+// ------------------- INIT -------------------
+loadTokens();
+setInterval(loadTokens, 5000); // auto-refresh
+</script>
+
+</body>
+</html>

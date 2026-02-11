@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Smart Queue Analytics Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<h2>📊 Smart Queue Analytics Dashboard</h2>
+
+<button onclick="loadPeakHours()">Peak Hours</button>
+<button onclick="loadDailyTrend()">Daily Trend</button>
+<button onclick="loadPrediction()">Prediction</button>
+
+<canvas id="chart" width="600" height="300"></canvas>
+
+<h3 id="prediction"></h3>
+
+<script>
+const API = "http://localhost:8081/api/analytics";
+let chart;
+
+function drawChart(labels, data, title) {
+    if(chart) chart.destroy();
+
+    chart = new Chart(document.getElementById("chart"), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: title,
+                data: data
+            }]
+        }
+    });
+}
+
+function loadPeakHours() {
+    fetch(API + "/peak-hours")
+        .then(res => res.json())
+        .then(data => {
+            drawChart(Object.keys(data), Object.values(data), "Peak Hours");
+        });
+}
+
+function loadDailyTrend() {
+    fetch(API + "/daily-trend")
+        .then(res => res.json())
+        .then(data => {
+            drawChart(Object.keys(data), Object.values(data), "Daily Trend");
+        });
+}
+
+function loadPrediction() {
+    fetch(API + "/prediction")
+        .then(res => res.text())
+        .then(data => {
+            document.getElementById("prediction").innerText =
+                "📈 Tomorrow Expected Tokens: " + Math.round(data);
+        });
+}
+</script>
+
+</body>
+</html>
+

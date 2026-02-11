@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Analytics Dashboard | Smart Queue</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body {
+    font-family:Segoe UI, sans-serif;
+    margin:0;
+    background:linear-gradient(135deg,#1d2671,#c33764);
+    color:white;
+}
+
+.container {
+    max-width:900px;
+    margin:40px auto;
+    text-align:center;
+    background:rgba(255,255,255,0.15);
+    padding:25px;
+    border-radius:18px;
+    backdrop-filter:blur(15px);
+}
+
+h2 {
+    margin-bottom:15px;
+}
+
+.stats {
+    display:flex;
+    justify-content:center;
+    gap:25px;
+    margin-bottom:15px;
+    flex-wrap: wrap;
+}
+
+.stat-box {
+    background:rgba(255,255,255,0.1);
+    padding:12px 20px;
+    border-radius:12px;
+    min-width:140px;
+}
+
+.stat-box h3 {
+    margin:0;
+    font-size:20px;
+}
+
+.stat-box p {
+    margin:5px 0 0;
+    font-size:13px;
+    opacity:0.8;
+}
+
+#periodSelect {
+    margin:15px 0;
+    padding:8px 12px;
+    border-radius:12px;
+    border:none;
+    font-size:14px;
+}
+
+/* ✅ Chart sizing */
+.chart-box {
+    width: 420px;
+    height: 260px;
+    margin: 20px auto;
+    background: rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 10px;
+}
+
+.chart-box canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* Responsive */
+@media(max-width:600px){
+    .chart-box {
+        width: 95%;
+        height: 240px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+    <h2>📊 Analytics Dashboard</h2>
+
+    <!-- Period Filter -->
+    <select id="periodSelect">
+        <option value="daily">Today</option>
+        <option value="weekly">This Week</option>
+        <option value="monthly">This Month</option>
+    </select>
+
+    <!-- Overall Stats -->
+    <div class="stats">
+        <div class="stat-box">
+            <h3 id="totalTokens">0</h3>
+            <p>Total Tokens</p>
+        </div>
+        <div class="stat-box">
+            <h3 id="avgWait">0 min</h3>
+            <p>Average Wait Time</p>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="chart-box">
+        <canvas id="statusChart"></canvas>
+    </div>
+
+    <div class="chart-box">
+        <canvas id="deptChart"></canvas>
+    </div>
+</div>
+
+<script>
+const statusCtx = document.getElementById('statusChart').getContext('2d');
+const deptCtx = document.getElementById('deptChart').getContext('2d');
+const periodSelect = document.getElementById('periodSelect');
+
+let statusChart, deptChart;
+
+function fetchAnalytics() {
+    const period = periodSelect.value;
+
+    // ---------- Status Analytics ----------
+    fetch(`http://localhost:8081/api/token/analytics?period=${period}`)
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById("totalTokens").textContent = data.totalTokens;
+        document.getElementById("avgWait").textContent =
+            data.averageWaitTime.toFixed(1) + " min";
+
+        const statusData = [data.waiting, data.serving, data.done];
+
+        if (!statusChart) {
+            statusChart = new Chart(statusCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Waiting', 'Serving', 'Done'],
+                    datasets: [{
+                        data: statusData,
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: 'white', font:{size:12} }
+                        },
+                        title: {
+                            display: true,
+                            text: `Token Status (${period})`,
+                            color:'white',
+                            font:{size:14}
+                        }
+                    }
+                }
+            });
+        } else {
+            statusChart.data.datasets[0].data = statusData;
+            statusChart.options.plugins.title.text = `Token Status (${period})`;
+            statusChart.update();
+        }
+    })
+    .catch(err => console.error("Backend not reachable", err));
+
+    // ---------- Department Analytics ----------
+    fetch(`http://localhost:8081/api/token/analytics/department?period=${period}`)
+    .then(res => res.json())
+    .then(data => {
+        const labels = Object.keys(data.departments);
+        const counts = Object.values(data.departments);
+
+        if (!deptChart) {
+            deptChart = new Chart(deptCtx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: counts
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false },
+                        title: {
+                            display: true,
+                            text: `Department-wise Tokens (${period})`,
+                            color:'white',
+                            font:{size:14}
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, ticks:{color:'white'} },
+                        x: { ticks:{color:'white'} }
+                    }
+                }
+            });
+        } else {
+            deptChart.data.labels = labels;
+            deptChart.data.datasets[0].data = counts;
+            deptChart.options.plugins.title.text =
+                `Department-wise Tokens (${period})`;
+            deptChart.update();
+        }
+    })
+    .catch(err => console.error("Backend not reachable", err));
+}
+
+// Load initially
+fetchAnalytics();
+
+// Change event
+periodSelect.addEventListener("change", fetchAnalytics);
+
+// Auto refresh every 10 sec
+setInterval(fetchAnalytics, 10000);
+</script>
+
+</body>
+</html>

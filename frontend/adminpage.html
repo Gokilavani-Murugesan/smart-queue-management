@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Admin Panel - Smart Queue</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<style>
+body { 
+    margin:0; 
+    font-family: "Poppins", sans-serif; 
+    background: linear-gradient(135deg,#1d2671,#c33764); 
+    color:white;
+}
+.navbar { 
+    display:flex; 
+    justify-content:space-between; 
+    padding:15px 30px; 
+    background:rgba(0,0,0,0.3);
+}
+.container { 
+    padding:90px 20px 20px; 
+    display:flex; 
+    flex-direction: column; 
+    align-items:center; 
+    gap:30px;
+}
+.card { 
+    background: rgba(255,255,255,0.15); 
+    padding:25px; 
+    border-radius:15px; 
+    width:90%; 
+    max-width:900px;
+}
+.queue-item { 
+    padding:10px; 
+    background:rgba(255,255,255,0.2); 
+    border-radius:10px; 
+    margin-bottom:8px; 
+    display:flex; 
+    justify-content:space-between;
+}
+button { 
+    padding:8px 12px; 
+    border:none; 
+    border-radius:8px; 
+    cursor:pointer; 
+    background:rgba(255,255,255,0.3);
+}
+button:hover { 
+    background:white; 
+    color:#1d2671;
+}
+h2,h3,h4 { 
+    text-align:center; 
+    margin:10px 0; 
+}
+
+/* Chart Buttons */
+.chart-buttons {
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap:10px;
+    margin-bottom:20px;
+}
+.chart-btn {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.3s;
+}
+.chart-btn:hover { 
+    background-color: #2ecc71; 
+}
+
+/* Chart Cards */
+.chart-card {
+    display: none;
+    background: rgba(255,255,255,0.15);
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+}
+.chart-card h4 { 
+    text-align:center; 
+    color:white; 
+    margin-bottom:10px; 
+}
+/* Fixed chart height */
+.chart-card canvas {
+    height: 300px !important;
+    max-height: 300px;
+}
+.token-buttons { 
+    display:flex; 
+    gap:15px; 
+    justify-content:center; 
+    margin:15px 0; 
+}
+
+@media (max-width:600px){
+    .chart-card canvas { height: 250px !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="navbar">
+    <div id="adminTitle">Smart Queue Admin</div>
+    <button onclick="logout()">Logout</button>
+</div>
+
+<div class="container">
+
+    <!-- QUEUE CARD -->
+    <div class="card">
+        <h2 id="categoryTitle"></h2>
+        <div>Now Serving: <b id="currentToken">--</b></div>
+
+        <div class="token-buttons">
+            <button onclick="callNext()">Call Next</button>
+            <button onclick="markCompleted()">Mark Completed</button>
+        </div>
+
+        <h3>Waiting Queue</h3>
+        <div id="queueList"></div>
+    </div>
+
+    <!-- ANALYTICS CARD -->
+    <div class="card">
+        <h3>Analytics</h3>
+
+        <div class="chart-buttons">
+            <button class="chart-btn" onclick="showChart('statusChart')">Token Status</button>
+            <button class="chart-btn" onclick="showChart('peakChart')">Peak Hour</button>
+            <button class="chart-btn" onclick="showChart('waitChart')">Waiting Time</button>
+            <button class="chart-btn" onclick="showChart('dailyChart')">Daily Trend</button>
+            <button class="chart-btn" onclick="showChart('deptChart')">Department Analysis</button>
+            <button class="chart-btn" onclick="showChart('predictChart')">Prediction</button>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-card">
+                <h4>Token Status</h4>
+                <canvas id="statusChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h4>Peak Hour Analysis</h4>
+                <canvas id="peakChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h4>Waiting Time Analysis</h4>
+                <canvas id="waitChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h4>Daily Trend</h4>
+                <canvas id="dailyChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h4>Department-wise Tokens</h4>
+                <canvas id="deptChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h4>Prediction System</h4>
+                <canvas id="predictChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let role = localStorage.getItem("userRole");
+if(!role){ alert("Unauthorized access!"); window.location.href="login.html"; }
+
+let categoryMap = {
+    "HOSPITAL_ADMIN": "Hospital",
+    "BANK_ADMIN": "Bank",
+    "GOVT_ADMIN": "Government"
+};
+let category = categoryMap[role];
+document.getElementById("categoryTitle").innerText = category + " Admin Panel";
+document.getElementById("adminTitle").innerText = category + " Admin";
+
+let queue = [];
+let allTokens = [];
+let charts = {};
+
+// ---------------- LOAD QUEUE ----------------
+function loadQueue(){
+    fetch(`http://localhost:8081/api/token/category/${category}`)
+    .then(res=>res.json())
+    .then(data=>{
+        allTokens = data;
+        queue = data.filter(t=>t.status==="WAITING");
+        renderQueue();
+        loadAnalytics();
+    });
+}
+
+// ---------------- RENDER QUEUE ----------------
+function renderQueue(){
+    const div = document.getElementById("queueList");
+    div.innerHTML="";
+    if(queue.length===0) div.innerHTML="<i>No tokens waiting</i>";
+    queue.forEach(t=>{
+        div.innerHTML+=`<div class="queue-item">Token ${t.tokenNumber} | ${t.department}</div>`;
+    });
+}
+
+// ---------------- TOKEN ACTIONS ----------------
+let currentToken = "--";
+function callNext(){
+    if(queue.length===0){ alert("No tokens waiting!"); return; }
+    currentToken = queue[0];
+    document.getElementById("currentToken").innerText=currentToken.tokenNumber;
+}
+function markCompleted(){
+    if(currentToken==="--"){ alert("No token selected!"); return; }
+    fetch(`http://localhost:8081/api/token/complete/${currentToken.id}`, {method:"POST"})
+    .then(()=>{ currentToken="--"; document.getElementById("currentToken").innerText="--"; loadQueue(); });
+}
+
+// ---------------- ANALYTICS ----------------
+function loadAnalytics(){
+    drawStatusChart();
+    drawPeakChart();
+    drawWaitingChart();
+    drawDailyChart();
+    drawDeptChart();
+    drawPredictionChart();
+}
+
+// ----- DRAW CHARTS -----
+function drawStatusChart(){
+    let waiting = allTokens.filter(t=>t.status==="WAITING").length;
+    let done = allTokens.filter(t=>t.status==="DONE").length;
+    draw("statusChart","bar",["Waiting","Completed"],[waiting,done]);
+}
+
+// 🔹 FIXED PEAK HOUR CHART
+function drawPeakChart(){
+    let hourMap = {};
+    allTokens.forEach(t=>{
+        let h = new Date(t.createdAt).getHours();
+        let label;
+        if(h===0) label="12 AM";
+        else if(h<12) label=h+" AM";
+        else if(h===12) label="12 PM";
+        else label=(h-12)+" PM";
+        hourMap[label] = (hourMap[label]||0)+1;
+    });
+    draw("peakChart","line",Object.keys(hourMap),Object.values(hourMap));
+}
+
+function drawWaitingChart(){
+    let times = allTokens.filter(t=>t.processingTimeMinutes).map(t=>t.processingTimeMinutes);
+    draw("waitChart","line",times.map((_,i)=>"T"+(i+1)),times);
+}
+function drawDailyChart(){
+    let dayMap={};
+    allTokens.forEach(t=>{ 
+        let d=new Date(t.createdAt).toLocaleDateString(); 
+        dayMap[d]=(dayMap[d]||0)+1; 
+    });
+    draw("dailyChart","bar",Object.keys(dayMap),Object.values(dayMap));
+}
+function drawDeptChart(){
+    let deptMap={};
+    allTokens.forEach(t=>{ 
+        deptMap[t.department]=(deptMap[t.department]||0)+1; 
+    });
+    draw("deptChart","pie",Object.keys(deptMap),Object.values(deptMap));
+}
+function drawPredictionChart(){
+    let todayCount = allTokens.length;
+    let predicted = Math.round(todayCount*1.2);
+    draw("predictChart","bar",["Today","Tomorrow(Predicted)"],[todayCount,predicted]);
+}
+
+// ----- HELPER DRAW -----
+function draw(id,type,labels,data){
+    const ctx=document.getElementById(id);
+    if(charts[id]) charts[id].destroy();
+    charts[id]=new Chart(ctx,{
+        type,
+        data:{
+            labels,
+            datasets:[{
+                label:"Tokens",
+                data,
+                backgroundColor:['#3498db','#2ecc71','#f1c40f','#e74c3c','#9b59b6','#1abc9c','#f39c12'],
+                borderColor:'#fff',
+                borderWidth:1
+            }]
+        },
+        options:{
+            responsive:true,
+            maintainAspectRatio:false,
+            plugins:{
+                legend:{labels:{color:'white', font:{size:14, weight:'bold'}}},
+                tooltip:{titleColor:'white', bodyColor:'white', backgroundColor:'rgba(0,0,0,0.7)'}
+            },
+            scales:{
+                x:{ticks:{color:'white', font:{size:12}}, grid:{color:'rgba(255,255,255,0.2)'}},
+                y:{beginAtZero:true, ticks:{color:'white', font:{size:12}, stepSize:1, precision:0}, grid:{color:'rgba(255,255,255,0.2)'}}
+            }
+        }
+    });
+}
+
+// ---------------- SHOW CHART BY BUTTON ----------------
+function showChart(id){
+    document.querySelectorAll(".chart-card").forEach(c=>c.style.display="none");
+    const chartCard = document.getElementById(id).parentElement;
+    chartCard.style.display="block";
+}
+
+// ---------------- LOGOUT ----------------
+function logout(){ localStorage.clear(); window.location.href="login.html"; }
+
+// ---------------- INIT ----------------
+loadQueue();
+setInterval(loadQueue,5000);
+window.onload = () => showChart("statusChart");
+</script>
+</body>
+</html>

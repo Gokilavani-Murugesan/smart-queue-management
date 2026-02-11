@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Token Notification | Smart Queue</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+* { box-sizing: border-box; font-family: "Segoe UI", sans-serif; margin:0; padding:0;}
+body { min-height: 100vh; background: linear-gradient(135deg,#1d2671,#c33764); display:flex; justify-content:center; align-items:flex-start; padding-top:80px; }
+
+/* Navbar */
+.navbar {
+    position: fixed;
+    top:0; left:0;
+    width:100%;
+    height:60px;
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 25px;
+    z-index: 1000;
+}
+.navbar h2 { color:white; margin:0; font-size:22px; }
+.navbar .nav a { color:white; margin-left:15px; text-decoration:none; font-weight:500; }
+.navbar .nav a:hover { text-decoration:underline; }
+
+/* Card */
+.card {
+    width: 380px; margin:40px auto; padding:30px;
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(20px);
+    border-radius:20px; box-shadow:0 8px 32px rgba(0,0,0,0.3);
+    color:white; text-align:center;
+}
+.card h2 { font-size:24px; margin-bottom:15px; }
+.card p { font-size:16px; margin-bottom:20px; opacity:0.85; }
+.card input { width:100%; padding:10px; margin-top:8px; border-radius:10px; border:none; outline:none; font-size:15px; }
+button { padding:12px 25px; border:none; border-radius:12px; background:#ffd700; color:#1d2671; font-weight:bold; cursor:pointer; transition:0.3s; }
+button:hover { background:#fff; color:#c33764; }
+.status { margin-top:20px; padding:15px; border-radius:12px; background: rgba(255,255,255,0.1); font-size:16px; text-align:left; }
+.footer { margin-top:15px; font-size:12px; opacity:0.7; text-align:center; }
+</style>
+</head>
+<body>
+
+<!-- Navbar -->
+<div class="navbar">
+    <h2>Smart Queue System</h2>
+    <div class="nav">
+        <a href="dashboard.html">Dashboard</a>
+        <a href="token.html">Get Token</a>
+        <a href="queuestatus.html">Queue Status</a>
+        <a href="notification.html">Notification</a>
+        <a href="login.html">Logout</a>
+    </div>
+</div>
+
+<!-- Card -->
+<div class="card">
+    <h2>Token Notification</h2>
+    <p>Check your token status and approximate waiting time</p>
+
+    <label for="myToken">Enter Your Token Number:</label>
+    <input type="number" id="myToken" placeholder="Your Token #">
+
+    <button onclick="notify()">Check Status</button>
+
+    <div class="status" id="statusInfo">Your token info will appear here</div>
+    <div class="footer">Smart Queue Management System © 2025</div>
+</div>
+
+<script>
+async function notify() {
+    const myTokenInput = document.getElementById("myToken").value;
+    const statusDiv = document.getElementById("statusInfo");
+
+    if (!myTokenInput) {
+        alert("Please enter your token number!");
+        return;
+    }
+
+    const myToken = parseInt(myTokenInput);
+
+    try {
+        // Fetch all tokens from backend
+        const res = await fetch("http://localhost:8081/api/token/all");
+        const tokens = await res.json();
+
+        if(tokens.length === 0){
+            statusDiv.innerHTML = "No tokens found in the system.";
+            return;
+        }
+
+        // Find the minimum token number that is still WAITING or SERVING
+        let currentToken = Math.min(...tokens
+            .filter(t => t.status.toUpperCase() !== "DONE")
+            .map(t => t.tokenNumber)
+        );
+
+        // Find the user's token in the system
+        const userToken = tokens.find(t => t.tokenNumber === myToken);
+        if(!userToken){
+            statusDiv.innerHTML = `❌ Token #${myToken} not found in the system.`;
+            return;
+        }
+
+        if(userToken.status.toUpperCase() === "DONE"){
+            statusDiv.innerHTML = `✅ Your token #${myToken} is already served.`;
+        } else if(userToken.tokenNumber === currentToken){
+            statusDiv.innerHTML = `🔔 Your token #${myToken} is being served now. Please proceed.`;
+        } else {
+            // Approx waiting time: assume 5 min per token
+            const waitingTokens = tokens
+                .filter(t => t.tokenNumber >= currentToken && t.tokenNumber < myToken)
+                .length;
+            const approxWait = waitingTokens * 5;
+            statusDiv.innerHTML = `⏳ Your token #${myToken} is waiting.<br>Approximate waiting time: ${approxWait} min.`;
+        }
+
+    } catch (err) {
+        console.error(err);
+        alert("Backend not reachable");
+    }
+}
+</script>
+
+</body>
+</html>
